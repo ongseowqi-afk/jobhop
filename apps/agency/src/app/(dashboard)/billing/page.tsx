@@ -16,19 +16,19 @@ export default async function BillingPage() {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
   const revenueMTD = invoices
-    .filter((i) => i.createdAt >= monthStart && i.status !== "DRAFT")
-    .reduce((s, i) => s + i.amount, 0);
+    .filter((i: { createdAt: Date; status: string; amount: number }) => i.createdAt >= monthStart && i.status !== "DRAFT")
+    .reduce((s: number, i: { amount: number }) => s + i.amount, 0);
 
   const outstanding = invoices
-    .filter((i) => i.status === "PENDING" || i.status === "OVERDUE")
-    .reduce((s, i) => s + i.amount, 0);
+    .filter((i: { status: string }) => i.status === "PENDING" || i.status === "OVERDUE")
+    .reduce((s: number, i: { amount: number }) => s + i.amount, 0);
 
   const collected = invoices
-    .filter((i) => i.status === "PAID")
-    .reduce((s, i) => s + i.amount, 0);
+    .filter((i: { status: string }) => i.status === "PAID")
+    .reduce((s: number, i: { amount: number }) => s + i.amount, 0);
 
-  const rateArr = invoices.filter((i) => i.billRate > 0).map((i) => i.billRate);
-  const avgBillRate = rateArr.length > 0 ? rateArr.reduce((s, r) => s + r, 0) / rateArr.length : 0;
+  const rateArr = invoices.filter((i: { billRate: number }) => i.billRate > 0).map((i: { billRate: number }) => i.billRate);
+  const avgBillRate = rateArr.length > 0 ? rateArr.reduce((s: number, r: number) => s + r, 0) / rateArr.length : 0;
 
   const serialized = invoices.map((inv) => ({
     id: inv.id,
