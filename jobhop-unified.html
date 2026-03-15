@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JobHop · Unified Recruitment & Workforce Management</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     GLOBAL TOKENS (same as original)
+     ============================================================ */
+  :root {
+    --ink: #0D0D0D;
+    --paper: #F5F2EC;
+    --cream: #EDE9DF;
+    --accent: #E85A2A;
+    --accent2: #2A7AE8;
+    --gold: #C8A84B;
+    --green: #4ADE80;
+    --muted: #8B8580;
+    --border: rgba(13,13,13,0.10);
+    --card: #FFFFFF;
+    --nav-h: 64px;
+    --bottom-h: 72px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: 'DM Sans', sans-serif; background: #E8E4DC; color: var(--ink); min-height: 100vh; }
+
+  /* ============================================================
+     SVG ICON HELPER
+     ============================================================ */
+  .ic { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .ic svg { width: 100%; height: 100%; }
+  .ic-16 { width: 16px; height: 16px; }
+  .ic-18 { width: 18px; height: 18px; }
+  .ic-20 { width: 20px; height: 20px; }
+  .ic-22 { width: 22px; height: 22px; }
+  .ic-24 { width: 24px; height: 24px; }
+
+  /* ============================================================
+     VIEW SWITCHER BAR
+     ============================================================ */
+  .view-bar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9000;
+    background: var(--ink); height: 48px;
+    display: flex; align-items: center; justify-content: center; padding: 0 20px;
+  }
+  .vb-brand {
+    position: absolute; left: 24px;
+    font-family: 'DM Serif Display', serif; font-size: 18px; color: white;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .vb-brand .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+  .vb-tabs { display: flex; background: rgba(255,255,255,.08); border-radius: 8px; padding: 3px; gap: 2px; }
+  .vb-tab {
+    padding: 6px 20px; border-radius: 6px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border: none; color: rgba(255,255,255,.45); background: none;
+    transition: all .15s; display: flex; align-items: center; gap: 6px;
+  }
+  .vb-tab:hover { color: rgba(255,255,255,.7); }
+  .vb-tab.active { background: white; color: var(--ink); }
+  .vb-tab .ic svg { stroke: currentColor; fill: none; }
+
+  /* ============================================================
+     PANELS
+     ============================================================ */
+  .panel-area { padding-top: 48px; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ============================================================
+     WORKER VIEW — preserved from original, emojis → SVG
+     ============================================================ */
+  .worker-wrap {
+    display: flex; gap: 40px; align-items: flex-start;
+    width: 100%; max-width: 900px; margin: 0 auto;
+    padding: 32px 16px;
+  }
+  .phone {
+    width: 390px; min-height: 844px; background: var(--paper);
+    border-radius: 44px; overflow: hidden;
+    box-shadow: 0 40px 80px rgba(0,0,0,0.25), 0 0 0 1px rgba(0,0,0,0.08), inset 0 0 0 1px rgba(255,255,255,0.5);
+    position: relative; display: flex; flex-direction: column;
+  }
+  .status-bar {
+    height: 44px; background: var(--paper);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 28px; font-size: 12px; font-weight: 600; flex-shrink: 0;
+  }
+  .status-time { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 500; }
+  .status-icons { display: flex; gap: 6px; align-items: center; font-size: 11px; }
+  .top-bar {
+    height: var(--nav-h); background: var(--paper);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 20px; flex-shrink: 0;
+  }
+  .top-bar-title { font-family: 'DM Serif Display', serif; font-size: 22px; letter-spacing: -.5px; }
+  .top-bar-sub { font-size: 12px; color: var(--muted); margin-top: 1px; }
+  .avatar-btn { width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; cursor: pointer; border: none; }
+  .notif-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--cream); display: flex; align-items: center; justify-content: center; cursor: pointer; border: none; position: relative; }
+  .notif-dot { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; background: var(--accent); border-radius: 50%; border: 2px solid var(--paper); }
+  .screen { flex: 1; overflow-y: auto; scrollbar-width: none; display: none; flex-direction: column; padding-bottom: var(--bottom-h); }
+  .screen::-webkit-scrollbar { display: none; }
+  .screen.active { display: flex; }
+  .bottom-nav {
+    height: var(--bottom-h); background: white; border-top: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 8px 8px; flex-shrink: 0;
+  }
+  .nav-item {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    cursor: pointer; padding: 8px 4px; border-radius: 12px;
+    transition: background .15s; border: none; background: none;
+  }
+  .nav-item:hover { background: var(--cream); }
+  .nav-item.active .nav-icon svg { stroke: var(--accent); }
+  .nav-item.active .nav-label { color: var(--accent); font-weight: 600; }
+  .nav-icon { display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; }
+  .nav-icon svg { stroke: var(--muted); fill: none; width: 20px; height: 20px; }
+  .nav-label { font-size: 10px; font-weight: 500; color: var(--muted); letter-spacing: .3px; }
+
+  /* ===== HOME ===== */
+  .greeting-band { background: var(--ink); padding: 24px 20px 32px; position: relative; overflow: hidden; }
+  .greeting-band::after { content: ''; position: absolute; bottom: -40px; right: -40px; width: 180px; height: 180px; border-radius: 50%; background: radial-gradient(circle, rgba(232,90,42,.3) 0%, transparent 70%); }
+  .greeting-hi { font-size: 13px; color: rgba(255,255,255,.5); margin-bottom: 4px; }
+  .greeting-name { font-family: 'DM Serif Display', serif; font-size: 28px; color: white; margin-bottom: 16px; }
+  .greeting-chips { display: flex; gap: 8px; }
+  .g-chip { padding: 6px 14px; border-radius: 100px; font-size: 12px; font-weight: 600; border: none; cursor: pointer; }
+  .g-chip.active { background: var(--accent); color: white; }
+  .g-chip.inactive { background: rgba(255,255,255,.1); color: rgba(255,255,255,.7); }
+
+  .section-pad { padding: 20px 20px 0; }
+  .section-label { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
+  .section-label a { font-size: 11px; color: var(--accent); text-decoration: none; font-weight: 600; letter-spacing: .3px; cursor: pointer; }
+
+  .kpi-strip { display: flex; gap: 10px; padding: 16px 20px 0; }
+  .kpi-card { flex: 1; background: var(--card); border-radius: 16px; padding: 16px 14px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+  .kpi-label { font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .kpi-val { font-family: 'DM Serif Display', serif; font-size: 26px; line-height: 1; letter-spacing: -.5px; }
+  .kpi-sub { font-size: 11px; margin-top: 3px; }
+  .up { color: var(--green); } .down { color: #F87171; }
+
+  .shift-card { background: var(--card); border-radius: 20px; margin: 14px 20px 0; padding: 18px; box-shadow: 0 2px 12px rgba(0,0,0,.07); cursor: pointer; transition: transform .15s; }
+  .shift-card:hover { transform: translateY(-2px); }
+  .shift-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+  .shift-badge { padding: 4px 12px; border-radius: 100px; font-size: 11px; font-weight: 700; }
+  .badge-confirmed { background: rgba(74,222,128,.12); color: #2D9A5A; }
+  .badge-pending { background: rgba(200,168,75,.12); color: #9A782A; }
+  .badge-open { background: rgba(42,122,232,.12); color: #1A5AB8; }
+  .shift-title { font-family: 'DM Serif Display', serif; font-size: 20px; margin-bottom: 4px; }
+  .shift-employer { font-size: 13px; color: var(--muted); }
+  .shift-details { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .shift-detail { display: flex; flex-direction: column; gap: 2px; }
+  .sd-label { font-size: 10px; font-weight: 600; letter-spacing: .8px; text-transform: uppercase; color: var(--muted); }
+  .sd-val { font-size: 13px; font-weight: 600; }
+  .shift-action { margin-top: 14px; width: 100%; padding: 12px; border-radius: 10px; background: var(--ink); color: white; border: none; cursor: pointer; font-size: 13px; font-weight: 600; letter-spacing: .3px; transition: background .2s; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .shift-action:hover { background: var(--accent); }
+
+  .job-card { background: var(--card); border-radius: 16px; margin: 0 20px 10px; padding: 16px; box-shadow: 0 1px 6px rgba(0,0,0,.05); display: flex; gap: 12px; cursor: pointer; transition: box-shadow .15s; }
+  .job-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.1); }
+  .job-co-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+  .job-info { flex: 1; }
+  .job-title-sm { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
+  .job-co-name { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+  .job-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag { padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 500; background: var(--cream); color: var(--ink); }
+  .tag.pay { background: rgba(74,222,128,.1); color: #1E6E3A; font-weight: 700; }
+  .job-apply { padding: 8px 16px; border-radius: 8px; background: var(--ink); color: white; border: none; cursor: pointer; font-size: 12px; font-weight: 600; flex-shrink: 0; align-self: center; }
+
+  /* ===== JOBS ===== */
+  .search-bar { margin: 12px 20px 0; position: relative; }
+  .search-bar input { width: 100%; padding: 12px 16px 12px 42px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--card); font-size: 14px; font-family: 'DM Sans', sans-serif; outline: none; }
+  .search-bar input:focus { border-color: var(--accent); }
+  .search-icon-w { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); }
+  .filter-row { display: flex; gap: 8px; padding: 12px 20px 0; overflow-x: auto; scrollbar-width: none; }
+  .filter-row::-webkit-scrollbar { display: none; }
+  .filter-chip { padding: 7px 16px; border-radius: 100px; font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer; border: 1.5px solid var(--border); background: var(--card); transition: all .15s; }
+  .filter-chip.active { background: var(--ink); color: white; border-color: var(--ink); }
+  .job-list-full { padding: 12px 20px 0; display: flex; flex-direction: column; gap: 12px; }
+  .jlf-card { background: var(--card); border-radius: 16px; padding: 18px; box-shadow: 0 1px 6px rgba(0,0,0,.05); cursor: pointer; }
+  .jlf-top { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 12px; }
+  .jlf-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .jlf-title { font-size: 16px; font-weight: 700; margin-bottom: 2px; }
+  .jlf-co { font-size: 12px; color: var(--muted); }
+  .jlf-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .jlf-foot { display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px solid var(--border); }
+  .pay-big { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--accent); }
+  .apply-btn { padding: 9px 20px; border-radius: 8px; background: var(--accent); color: white; border: none; cursor: pointer; font-size: 13px; font-weight: 600; }
+  .save-btn { width: 36px; height: 36px; border-radius: 8px; background: var(--cream); border: none; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+
+  /* ===== SCHEDULE ===== */
+  .cal-strip { padding: 12px 20px 0; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+  .cal-strip::-webkit-scrollbar { display: none; }
+  .cal-day { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 8px; border-radius: 12px; cursor: pointer; min-width: 48px; transition: background .15s; }
+  .cal-day.today { background: var(--ink); }
+  .cal-day.today .cal-wd, .cal-day.today .cal-dt { color: white; }
+  .cal-day.has-shift .cal-dot { background: var(--accent); }
+  .cal-wd { font-size: 10px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; color: var(--muted); }
+  .cal-dt { font-size: 18px; font-weight: 700; }
+  .cal-dot { width: 5px; height: 5px; border-radius: 50%; background: transparent; }
+
+  .sched-shift { background: var(--card); border-radius: 16px; margin: 12px 20px 0; padding: 18px; box-shadow: 0 1px 6px rgba(0,0,0,.05); display: flex; gap: 14px; }
+  .sched-time-col { display: flex; flex-direction: column; align-items: center; gap: 0; min-width: 56px; }
+  .sched-t { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 500; color: var(--muted); }
+  .sched-line { flex: 1; width: 2px; background: var(--border); margin: 4px 0; min-height: 20px; }
+  .sched-info { flex: 1; }
+  .sched-title { font-size: 15px; font-weight: 700; margin-bottom: 3px; }
+  .sched-loc { font-size: 12px; color: var(--muted); margin-bottom: 8px; display: flex; align-items: center; gap: 4px; }
+  .sched-pills { display: flex; gap: 6px; }
+  .sched-pill { padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 600; }
+  .pill-green { background: rgba(74,222,128,.1); color: #1E6E3A; }
+  .pill-gold { background: rgba(200,168,75,.1); color: #7A5A10; }
+  .pill-blue { background: rgba(42,122,232,.1); color: #1A5AB8; }
+
+  .earnings-summary { background: var(--ink); border-radius: 20px; margin: 16px 20px 0; padding: 20px; color: white; }
+  .es-label { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(255,255,255,.4); font-weight: 600; margin-bottom: 8px; }
+  .es-val { font-family: 'DM Serif Display', serif; font-size: 36px; letter-spacing: -1px; margin-bottom: 4px; }
+  .es-sub { font-size: 12px; color: rgba(255,255,255,.5); }
+  .es-bars { display: flex; gap: 4px; align-items: flex-end; height: 40px; margin-top: 16px; }
+  .es-bar { flex: 1; background: rgba(255,255,255,.1); border-radius: 2px; }
+  .es-bar.hi { background: var(--accent); }
+
+  /* ===== EARNINGS ===== */
+  .earn-hero { background: var(--ink); padding: 24px 20px 32px; }
+  .earn-total-label { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(255,255,255,.4); font-weight: 600; margin-bottom: 6px; }
+  .earn-total { font-family: 'DM Serif Display', serif; font-size: 48px; letter-spacing: -2px; color: white; margin-bottom: 4px; }
+  .earn-period { font-size: 13px; color: rgba(255,255,255,.5); margin-bottom: 20px; }
+  .earn-tabs { display: flex; gap: 0; background: rgba(255,255,255,.08); border-radius: 8px; padding: 3px; width: fit-content; }
+  .earn-tab { padding: 6px 20px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; color: rgba(255,255,255,.5); background: none; transition: all .15s; }
+  .earn-tab.active { background: white; color: var(--ink); }
+
+  .payslip-row { display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--border); cursor: pointer; }
+  .payslip-row:hover { background: var(--cream); }
+  .payslip-icon { width: 40px; height: 40px; border-radius: 10px; background: var(--cream); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .payslip-info { flex: 1; }
+  .payslip-name { font-size: 14px; font-weight: 600; }
+  .payslip-date { font-size: 12px; color: var(--muted); }
+  .payslip-amt { font-family: 'DM Serif Display', serif; font-size: 20px; letter-spacing: -.5px; }
+  .payslip-status { font-size: 11px; text-align: right; margin-top: 2px; }
+  .ps-paid { color: #2D9A5A; font-weight: 700; }
+  .ps-pending { color: var(--gold); font-weight: 700; }
+
+  .breakdown-card { background: var(--card); border-radius: 16px; margin: 16px 20px 0; padding: 18px; box-shadow: 0 1px 6px rgba(0,0,0,.05); }
+  .bk-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .bk-row:last-child { border-bottom: none; }
+  .bk-label { font-size: 13px; color: var(--muted); }
+  .bk-val { font-size: 14px; font-weight: 700; }
+
+  /* ===== PROFILE ===== */
+  .profile-hero { background: var(--ink); padding: 24px 20px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .big-avatar { width: 80px; height: 80px; border-radius: 50%; background: var(--accent); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 28px; border: 3px solid rgba(255,255,255,.2); }
+  .profile-name { font-family: 'DM Serif Display', serif; font-size: 24px; color: white; }
+  .profile-role { font-size: 13px; color: rgba(255,255,255,.5); }
+  .rating-row { display: flex; gap: 4px; align-items: center; }
+  .stars { color: var(--gold); font-size: 14px; }
+  .rating-num { font-size: 13px; color: rgba(255,255,255,.7); font-weight: 600; margin-left: 4px; }
+  .profile-stat-row { display: flex; gap: 1px; background: rgba(255,255,255,.08); border-radius: 12px; margin-top: 16px; overflow: hidden; width: 100%; }
+  .ps-item { flex: 1; padding: 14px 10px; text-align: center; }
+  .ps-val { font-family: 'DM Serif Display', serif; font-size: 22px; color: white; }
+  .ps-label { font-size: 10px; color: rgba(255,255,255,.4); font-weight: 600; letter-spacing: .5px; margin-top: 2px; }
+  .menu-section { padding: 20px 20px 0; }
+  .menu-row { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--border); cursor: pointer; transition: opacity .15s; }
+  .menu-row:hover { opacity: .7; }
+  .menu-icon { width: 40px; height: 40px; border-radius: 10px; background: var(--cream); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .menu-label { font-size: 15px; font-weight: 500; flex: 1; }
+  .menu-arrow { color: var(--muted); font-size: 16px; }
+  .menu-badge { padding: 2px 10px; border-radius: 100px; background: var(--accent); color: white; font-size: 11px; font-weight: 700; }
+  .skill-tags { display: flex; flex-wrap: wrap; gap: 8px; padding: 16px 20px 0; }
+  .skill-tag { padding: 7px 16px; border-radius: 100px; background: var(--card); border: 1.5px solid var(--border); font-size: 13px; font-weight: 600; }
+  .skill-tag.verified { border-color: var(--green); color: #1E6E3A; background: rgba(74,222,128,.06); }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--ink); color: white; padding: 12px 24px; border-radius: 100px; font-size: 13px; font-weight: 600; opacity: 0; transition: all .3s; pointer-events: none; white-space: nowrap; z-index: 99999; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ============================================================
+     DESKTOP PORTAL SHARED STYLES (Recruiter + Agency)
+     ============================================================ */
+  .portal-wrap { max-width: 1320px; margin: 0 auto; padding: 24px 32px; display: flex; gap: 24px; min-height: calc(100vh - 48px); }
+  .sidebar {
+    width: 240px; flex-shrink: 0; background: var(--card); border-radius: 16px;
+    padding: 24px 16px; box-shadow: 0 1px 6px rgba(0,0,0,.05);
+    display: flex; flex-direction: column; gap: 4px;
+    height: fit-content; position: sticky; top: 72px;
+  }
+  .sb-brand { font-family: 'DM Serif Display', serif; font-size: 20px; margin-bottom: 2px; padding: 0 8px; display: flex; align-items: center; gap: 8px; }
+  .sb-sub { font-size: 12px; color: var(--muted); padding: 0 8px; margin-bottom: 16px; }
+  .sb-item {
+    padding: 10px 12px; border-radius: 10px; font-size: 14px; font-weight: 500;
+    cursor: pointer; display: flex; align-items: center; gap: 10px;
+    transition: all .12s; border: none; background: none; width: 100%; text-align: left;
+    color: var(--muted);
+  }
+  .sb-item:hover { background: var(--cream); color: var(--ink); }
+  .sb-item.active { background: rgba(232,90,42,.08); color: var(--accent); font-weight: 600; }
+  .sb-item .ic svg { stroke: currentColor; fill: none; }
+  .sb-badge { margin-left: auto; padding: 2px 8px; border-radius: 100px; background: var(--accent); color: white; font-size: 11px; font-weight: 700; }
+  .sb-item.active .sb-badge { background: var(--accent); }
+
+  .portal-main { flex: 1; display: flex; flex-direction: column; gap: 20px; }
+  .p-screen { display: none; flex-direction: column; gap: 20px; }
+  .p-screen.active { display: flex; }
+
+  .p-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+  .p-header h1 { font-family: 'DM Serif Display', serif; font-size: 28px; letter-spacing: -.5px; }
+  .p-header-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .p-btn {
+    padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 600;
+    cursor: pointer; border: none; transition: all .15s;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .p-btn svg { stroke: currentColor; fill: none; width: 16px; height: 16px; }
+  .p-btn-primary { background: var(--accent); color: white; }
+  .p-btn-primary:hover { background: #D04D22; }
+  .p-btn-ghost { background: var(--cream); color: var(--ink); }
+  .p-btn-ghost:hover { background: #DDD9CF; }
+
+  .p-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  @media (max-width: 900px) { .p-stats { grid-template-columns: repeat(2, 1fr); } }
+  .p-stat {
+    background: var(--card); border-radius: 16px; padding: 20px;
+    box-shadow: 0 1px 6px rgba(0,0,0,.05);
+  }
+  .p-stat-label { font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .p-stat-val { font-family: 'DM Serif Display', serif; font-size: 32px; letter-spacing: -1px; }
+  .p-stat-sub { font-size: 12px; margin-top: 4px; }
+
+  .p-card {
+    background: var(--card); border-radius: 16px; padding: 24px;
+    box-shadow: 0 1px 6px rgba(0,0,0,.05);
+  }
+  .p-card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .p-card-title { font-size: 16px; font-weight: 700; }
+
+  table.ptable { width: 100%; border-collapse: collapse; }
+  table.ptable th { text-align: left; font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); padding: 10px 12px; border-bottom: 2px solid var(--border); }
+  table.ptable td { padding: 14px 12px; border-bottom: 1px solid var(--border); font-size: 14px; vertical-align: middle; }
+  table.ptable tr:last-child td { border-bottom: none; }
+  table.ptable tr:hover td { background: rgba(0,0,0,.015); }
+  .td-name { font-weight: 600; }
+  .td-badge { padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 700; display: inline-block; }
+  .td-avatar { width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; color: white; flex-shrink: 0; }
+  .td-actions { display: flex; gap: 6px; }
+  .td-btn {
+    padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border: 1.5px solid var(--border); background: var(--card);
+    transition: all .12s; display: inline-flex; align-items: center; gap: 4px;
+  }
+  .td-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .td-btn.accept { background: #2D9A5A; color: white; border-color: #2D9A5A; }
+  .td-btn.reject { color: #F87171; border-color: #F87171; }
+  .progress-bar { background: var(--cream); border-radius: 100px; height: 8px; width: 100px; }
+  .progress-fill { border-radius: 100px; height: 8px; }
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     HIDDEN SVG SPRITE SHEET
+     ============================================================ -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="s-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></symbol>
+  <symbol id="s-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
+  <symbol id="s-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></symbol>
+  <symbol id="s-wallet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="6" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><circle cx="16" cy="14" r="1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="s-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  <symbol id="s-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></symbol>
+  <symbol id="s-star" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></symbol>
+  <symbol id="s-briefcase" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></symbol>
+  <symbol id="s-mappin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></symbol>
+  <symbol id="s-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></symbol>
+  <symbol id="s-bank" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3"/></symbol>
+  <symbol id="s-chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></symbol>
+  <symbol id="s-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></symbol>
+  <symbol id="s-store" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 9l1-4h16l1 4"/><path d="M3 9v11a1 1 0 001 1h16a1 1 0 001-1V9"/><path d="M9 21V12h6v9"/></symbol>
+  <symbol id="s-package" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></symbol>
+  <symbol id="s-truck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></symbol>
+  <symbol id="s-tent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 2L2 22h20L12 2z"/><path d="M12 22v-9"/></symbol>
+  <symbol id="s-heart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></symbol>
+  <symbol id="s-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="s-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+  <symbol id="s-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+  <symbol id="s-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></symbol>
+  <symbol id="s-barchart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></symbol>
+  <symbol id="s-dollar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></symbol>
+  <symbol id="s-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="s-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
+  <symbol id="s-filter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></symbol>
+  <symbol id="s-inbox" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></symbol>
+  <symbol id="s-building" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><line x1="8" y1="6" x2="8" y2="6.01"/><line x1="12" y1="6" x2="12" y2="6.01"/><line x1="16" y1="6" x2="16" y2="6.01"/><line x1="8" y1="10" x2="8" y2="10.01"/><line x1="12" y1="10" x2="12" y2="10.01"/><line x1="16" y1="10" x2="16" y2="10.01"/><line x1="8" y1="14" x2="8" y2="14.01"/><line x1="12" y1="14" x2="12" y2="14.01"/><line x1="16" y1="14" x2="16" y2="14.01"/></symbol>
+  <symbol id="s-clipboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></symbol>
+  <symbol id="s-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+  <symbol id="s-award" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></symbol>
+  <symbol id="s-trending" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></symbol>
+  <symbol id="s-qr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><rect x="18" y="18" width="3" height="3"/><line x1="14" y1="18" x2="17" y2="18"/><line x1="18" y1="14" x2="18" y2="17"/></symbol>
+  <symbol id="s-signal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="2" y1="20" x2="2.01" y2="20"/><line x1="7" y1="20" x2="7" y2="16"/><line x1="12" y1="20" x2="12" y2="12"/><line x1="17" y1="20" x2="17" y2="8"/><line x1="22" y1="20" x2="22" y2="4"/></symbol>
+  <symbol id="s-wifi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12.55a11 11 0 0114.08 0"/><path d="M1.42 9a16 16 0 0121.16 0"/><path d="M8.53 16.11a6 6 0 016.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></symbol>
+  <symbol id="s-battery" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="1" y="6" width="18" height="12" rx="2"/><line x1="23" y1="13" x2="23" y2="11"/></symbol>
+  <symbol id="s-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></symbol>
+  <symbol id="s-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></symbol>
+  <symbol id="s-percent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></symbol>
+</svg>
+
+<!-- ============================================================
+     VIEW SWITCHER
+     ============================================================ -->
+<div class="view-bar">
+  <div class="vb-brand"><span class="dot"></span> JobHop</div>
+  <div class="vb-tabs">
+    <button class="vb-tab active" onclick="switchView('worker')">
+      <span class="ic ic-16"><svg><use href="#s-user"/></svg></span> Worker App
+    </button>
+    <button class="vb-tab" onclick="switchView('recruiter')">
+      <span class="ic ic-16"><svg><use href="#s-briefcase"/></svg></span> Recruiter Portal
+    </button>
+    <button class="vb-tab" onclick="switchView('agency')">
+      <span class="ic ic-16"><svg><use href="#s-building"/></svg></span> Agency Portal
+    </button>
+  </div>
+</div>
+
+<div class="panel-area">
+
+<!-- ============================================================
+     PANEL 1: WORKER VIEW (preserved from original, emojis→SVG)
+     ============================================================ -->
+<div class="panel active" id="panel-worker">
+<div class="worker-wrap">
+  <div class="phone" id="app">
+    <div class="status-bar">
+      <span class="status-time" id="clock">9:41</span>
+      <div class="status-icons">
+        <span class="ic ic-16"><svg><use href="#s-signal"/></svg></span>
+        <span class="ic ic-16"><svg><use href="#s-wifi"/></svg></span>
+        <span class="ic ic-16"><svg><use href="#s-battery"/></svg></span>
+      </div>
+    </div>
+    <div class="top-bar">
+      <div>
+        <div class="top-bar-title" id="screen-title">Good morning</div>
+        <div class="top-bar-sub" id="screen-sub">Tuesday, 10 March 2026</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="notif-btn" onclick="showToast('3 new notifications')"><span class="ic ic-18"><svg><use href="#s-bell"/></svg></span><span class="notif-dot"></span></button>
+        <button class="avatar-btn" onclick="goTo('profile')">ML</button>
+      </div>
+    </div>
+
+    <!-- HOME -->
+    <div class="screen active" id="screen-home">
+      <div class="greeting-band">
+        <div class="greeting-hi">Hi there,</div>
+        <div class="greeting-name">Marcus Lim</div>
+        <div class="greeting-chips">
+          <button class="g-chip active">Available Now</button>
+          <button class="g-chip inactive">3 Active Shifts</button>
+        </div>
+      </div>
+      <div class="kpi-strip">
+        <div class="kpi-card"><div class="kpi-label">This Week</div><div class="kpi-val">$386</div><div class="kpi-sub up">↑ 22% vs last wk</div></div>
+        <div class="kpi-card"><div class="kpi-label">Rating</div><div class="kpi-val">4.9</div><div class="kpi-sub" style="color:var(--gold)">★★★★★</div></div>
+        <div class="kpi-card"><div class="kpi-label">Shifts Done</div><div class="kpi-val">47</div><div class="kpi-sub up">↑ 3 this month</div></div>
+      </div>
+      <div class="section-pad" style="margin-top:20px">
+        <div class="section-label">Upcoming Shift <a onclick="goTo('schedule')">View all →</a></div>
+        <div class="shift-card">
+          <div class="shift-card-header"><div><div class="shift-title">Event Staff</div><div class="shift-employer">DBS Marina Bay Sands</div></div><div class="shift-badge badge-confirmed">Confirmed</div></div>
+          <div class="shift-details">
+            <div class="shift-detail"><div class="sd-label">Date</div><div class="sd-val">Tomorrow, 11 Mar</div></div>
+            <div class="shift-detail"><div class="sd-label">Time</div><div class="sd-val">2pm – 10pm</div></div>
+            <div class="shift-detail"><div class="sd-label">Pay</div><div class="sd-val" style="color:var(--accent)">$15/hr · $120</div></div>
+            <div class="shift-detail"><div class="sd-label">Location</div><div class="sd-val">Marina Bay Sands</div></div>
+          </div>
+          <button class="shift-action" onclick="showToast('QR code generated!')"><span class="ic ic-16"><svg style="stroke:white"><use href="#s-qr"/></svg></span> Clock In with QR</button>
+        </div>
+      </div>
+      <div class="section-pad" style="margin-top:20px"><div class="section-label">Jobs For You <a onclick="goTo('jobs')">See more →</a></div></div>
+      <div class="job-card" onclick="goTo('jobs')">
+        <div class="job-co-icon" style="background:#FFF0E8"><span class="ic ic-22"><svg style="stroke:var(--accent);fill:none"><use href="#s-store"/></svg></span></div>
+        <div class="job-info"><div class="job-title-sm">Retail Associate</div><div class="job-co-name">Uniqlo · Orchard Road</div><div class="job-tags"><span class="tag pay">$13/hr</span><span class="tag">Retail</span><span class="tag">Ongoing</span></div></div>
+        <button class="job-apply" onclick="event.stopPropagation();showToast('Applied to Retail Associate!')">Apply</button>
+      </div>
+      <div class="job-card" onclick="goTo('jobs')">
+        <div class="job-co-icon" style="background:#F0F4FF"><span class="ic ic-22"><svg style="stroke:var(--accent2);fill:none"><use href="#s-package"/></svg></span></div>
+        <div class="job-info"><div class="job-title-sm">Warehouse Packer</div><div class="job-co-name">Lazada · Tuas</div><div class="job-tags"><span class="tag pay">$12.50/hr</span><span class="tag">Logistics</span><span class="tag">15 Mar</span></div></div>
+        <button class="job-apply" onclick="event.stopPropagation();showToast('Applied to Warehouse Packer!')">Apply</button>
+      </div>
+      <div style="height:8px"></div>
+    </div>
+
+    <!-- JOBS -->
+    <div class="screen" id="screen-jobs">
+      <div class="search-bar"><span class="search-icon-w ic ic-18"><svg style="stroke:var(--muted);fill:none"><use href="#s-search"/></svg></span><input type="text" placeholder="Search jobs, roles, companies…" /></div>
+      <div class="filter-row"><button class="filter-chip active">All Jobs</button><button class="filter-chip">Logistics</button><button class="filter-chip">Retail</button><button class="filter-chip">Events</button><button class="filter-chip">Delivery</button><button class="filter-chip">Saved</button></div>
+      <div class="job-list-full">
+        <div class="jlf-card"><div class="jlf-top"><div class="jlf-icon" style="background:#FFF0E8"><span class="ic ic-22"><svg style="stroke:var(--accent);fill:none"><use href="#s-tent"/></svg></span></div><div><div class="jlf-title">Event Crew × 12</div><div class="jlf-co">DBS Marina Bay Sands · CBD</div></div><button class="save-btn" onclick="showToast('Saved!')"><span class="ic ic-18"><svg style="stroke:var(--muted);fill:none"><use href="#s-heart"/></svg></span></button></div><div class="jlf-meta"><span class="tag">18–19 Mar</span><span class="tag">10 hrs/day</span><span class="tag">Event</span><span class="tag badge-confirmed" style="background:rgba(74,222,128,.1);color:#2D9A5A;padding:3px 10px;border-radius:100px;font-size:11px;font-weight:600">12 spots left</span></div><div class="jlf-foot"><div><div class="pay-big">$15/hr</div><div style="font-size:11px;color:var(--muted)">Est. $300 total</div></div><button class="apply-btn" onclick="showToast('Applied! We\'re on it.')">Apply Now</button></div></div>
+        <div class="jlf-card"><div class="jlf-top"><div class="jlf-icon" style="background:#F0F4FF"><span class="ic ic-22"><svg style="stroke:var(--accent2);fill:none"><use href="#s-package"/></svg></span></div><div><div class="jlf-title">Warehouse Packer × 20</div><div class="jlf-co">Lazada Fulfillment · Tuas</div></div><button class="save-btn" onclick="showToast('Saved!')"><span class="ic ic-18"><svg style="stroke:var(--muted);fill:none"><use href="#s-heart"/></svg></span></button></div><div class="jlf-meta"><span class="tag">Starts 15 Mar</span><span class="tag">8am–5pm</span><span class="tag">Logistics</span><span class="tag" style="background:rgba(200,168,75,.1);color:#9A782A;padding:3px 10px;border-radius:100px;font-size:11px;font-weight:600">2 spots left</span></div><div class="jlf-foot"><div><div class="pay-big">$12.50/hr</div><div style="font-size:11px;color:var(--muted)">Est. $112.50/day</div></div><button class="apply-btn" onclick="showToast('Applied! We\'re on it.')">Apply Now</button></div></div>
+        <div class="jlf-card"><div class="jlf-top"><div class="jlf-icon" style="background:#F5FFF5"><span class="ic ic-22"><svg style="stroke:#2D9A5A;fill:none"><use href="#s-store"/></svg></span></div><div><div class="jlf-title">Retail Associate × 8</div><div class="jlf-co">Uniqlo · Orchard Road</div></div><button class="save-btn" onclick="showToast('Saved!')"><span class="ic ic-18"><svg style="stroke:var(--muted);fill:none"><use href="#s-heart"/></svg></span></button></div><div class="jlf-meta"><span class="tag">Ongoing</span><span class="tag">Flexible hrs</span><span class="tag">Retail</span></div><div class="jlf-foot"><div><div class="pay-big">$13/hr</div><div style="font-size:11px;color:var(--muted)">Flexible schedule</div></div><button class="apply-btn" onclick="showToast('Applied! We\'re on it.')">Apply Now</button></div></div>
+        <div class="jlf-card"><div class="jlf-top"><div class="jlf-icon" style="background:#FFF8F0"><span class="ic ic-22"><svg style="stroke:#C87A30;fill:none"><use href="#s-truck"/></svg></span></div><div><div class="jlf-title">Delivery Rider × 30</div><div class="jlf-co">GrabFood · Island-wide</div></div><button class="save-btn" onclick="showToast('Saved!')"><span class="ic ic-18"><svg style="stroke:var(--muted);fill:none"><use href="#s-heart"/></svg></span></button></div><div class="jlf-meta"><span class="tag">Apr onwards</span><span class="tag">Own vehicle</span><span class="tag">Delivery</span></div><div class="jlf-foot"><div><div class="pay-big">$16/hr</div><div style="font-size:11px;color:var(--muted)">+ delivery bonuses</div></div><button class="apply-btn" onclick="showToast('Applied! We\'re on it.')">Apply Now</button></div></div>
+      </div>
+      <div style="height:8px"></div>
+    </div>
+
+    <!-- SCHEDULE -->
+    <div class="screen" id="screen-schedule">
+      <div class="cal-strip"><div class="cal-day"><div class="cal-wd">Mon</div><div class="cal-dt">9</div><div class="cal-dot"></div></div><div class="cal-day today has-shift"><div class="cal-wd">Tue</div><div class="cal-dt">10</div><div class="cal-dot"></div></div><div class="cal-day has-shift"><div class="cal-wd">Wed</div><div class="cal-dt">11</div><div class="cal-dot"></div></div><div class="cal-day"><div class="cal-wd">Thu</div><div class="cal-dt">12</div><div class="cal-dot"></div></div><div class="cal-day has-shift"><div class="cal-wd">Fri</div><div class="cal-dt">13</div><div class="cal-dot"></div></div><div class="cal-day"><div class="cal-wd">Sat</div><div class="cal-dt">14</div><div class="cal-dot"></div></div><div class="cal-day has-shift"><div class="cal-wd">Sun</div><div class="cal-dt">15</div><div class="cal-dot"></div></div></div>
+      <div class="earnings-summary"><div class="es-label">Week of 10 Mar</div><div class="es-val">$386</div><div class="es-sub">3 confirmed shifts · 26 hrs</div><div class="es-bars"><div class="es-bar" style="height:35%"></div><div class="es-bar hi" style="height:100%"></div><div class="es-bar" style="height:60%"></div><div class="es-bar" style="height:80%"></div><div class="es-bar" style="height:45%"></div><div class="es-bar" style="height:70%"></div><div class="es-bar hi" style="height:90%"></div></div></div>
+      <div class="section-pad" style="margin-top:20px"><div class="section-label">Today · Tue 10 Mar</div></div>
+      <div class="sched-shift"><div class="sched-time-col"><div class="sched-t">9am</div><div class="sched-line"></div><div class="sched-t">1pm</div></div><div class="sched-info"><div class="sched-title">Warehouse Lead</div><div class="sched-loc"><span class="ic ic-16"><svg style="stroke:var(--muted);fill:none"><use href="#s-mappin"/></svg></span> Tuas, Singapore</div><div class="sched-pills"><span class="sched-pill pill-green">Active</span><span class="sched-pill pill-gold">$14/hr</span></div></div></div>
+      <div class="section-pad" style="margin-top:16px"><div class="section-label">Upcoming</div></div>
+      <div class="sched-shift"><div class="sched-time-col"><div class="sched-t">2pm</div><div class="sched-line"></div><div class="sched-t">10pm</div></div><div class="sched-info"><div class="sched-title">Event Staff</div><div class="sched-loc"><span class="ic ic-16"><svg style="stroke:var(--muted);fill:none"><use href="#s-mappin"/></svg></span> Marina Bay Sands</div><div class="sched-pills"><span class="sched-pill pill-blue">Tomorrow</span><span class="sched-pill pill-gold">$15/hr</span></div></div></div>
+      <div class="sched-shift" style="margin-top:10px"><div class="sched-time-col"><div class="sched-t">8am</div><div class="sched-line"></div><div class="sched-t">4pm</div></div><div class="sched-info"><div class="sched-title">Warehouse Packer</div><div class="sched-loc"><span class="ic ic-16"><svg style="stroke:var(--muted);fill:none"><use href="#s-mappin"/></svg></span> Jurong East</div><div class="sched-pills"><span class="sched-pill" style="background:var(--cream);color:var(--muted)">15 Mar</span><span class="sched-pill pill-gold">$12.50/hr</span></div></div></div>
+      <div style="height:8px"></div>
+    </div>
+
+    <!-- EARNINGS -->
+    <div class="screen" id="screen-earnings">
+      <div class="earn-hero"><div class="earn-total-label">Total Earned</div><div class="earn-total">$2,840</div><div class="earn-period">March 2026 · 47 shifts completed</div><div class="earn-tabs"><button class="earn-tab active">This Month</button><button class="earn-tab">3 Months</button><button class="earn-tab">All Time</button></div></div>
+      <div class="breakdown-card"><div class="section-label" style="margin-bottom:0">Breakdown</div><div class="bk-row"><div class="bk-label">Base Earnings</div><div class="bk-val">$2,640</div></div><div class="bk-row"><div class="bk-label">Bonuses</div><div class="bk-val" style="color:var(--green)">+$320</div></div><div class="bk-row"><div class="bk-label">CPF Contribution</div><div class="bk-val" style="color:#F87171">−$120</div></div><div class="bk-row"><div class="bk-label" style="font-weight:700;color:var(--ink)">Net Payout</div><div class="bk-val" style="font-size:18px;color:var(--accent)">$2,840</div></div></div>
+      <div class="section-pad" style="margin-top:20px"><div class="section-label">Recent Payslips</div></div>
+      <div class="payslip-row"><div class="payslip-icon"><span class="ic ic-18"><svg style="stroke:var(--accent);fill:none"><use href="#s-wallet"/></svg></span></div><div class="payslip-info"><div class="payslip-name">Week 10 · Mar 4–10</div><div class="payslip-date">3 shifts · 24 hrs</div></div><div style="text-align:right"><div class="payslip-amt">$386</div><div class="payslip-status ps-paid">Paid</div></div></div>
+      <div class="payslip-row"><div class="payslip-icon"><span class="ic ic-18"><svg style="stroke:var(--accent);fill:none"><use href="#s-wallet"/></svg></span></div><div class="payslip-info"><div class="payslip-name">Week 9 · Feb 26–Mar 3</div><div class="payslip-date">2 shifts · 18 hrs</div></div><div style="text-align:right"><div class="payslip-amt">$312</div><div class="payslip-status ps-paid">Paid</div></div></div>
+      <div class="payslip-row"><div class="payslip-icon"><span class="ic ic-18"><svg style="stroke:var(--gold);fill:none"><use href="#s-clock"/></svg></span></div><div class="payslip-info"><div class="payslip-name">Week 11 · Mar 11–17</div><div class="payslip-date">Processing…</div></div><div style="text-align:right"><div class="payslip-amt">$240</div><div class="payslip-status ps-pending">Pending</div></div></div>
+      <div style="height:8px"></div>
+    </div>
+
+    <!-- PROFILE -->
+    <div class="screen" id="screen-profile">
+      <div class="profile-hero"><div class="big-avatar">ML</div><div class="profile-name">Marcus Lim</div><div class="profile-role">On-Demand Worker · Since Jan 2025</div><div class="rating-row"><span class="stars">★★★★★</span><span class="rating-num">4.9 (38 reviews)</span></div><div class="profile-stat-row"><div class="ps-item"><div class="ps-val">47</div><div class="ps-label">Shifts</div></div><div class="ps-item"><div class="ps-val">$2.8k</div><div class="ps-label">Earned</div></div><div class="ps-item"><div class="ps-val">96%</div><div class="ps-label">Show Rate</div></div><div class="ps-item"><div class="ps-val">3</div><div class="ps-label">Sectors</div></div></div></div>
+      <div class="section-pad" style="margin-top:16px"><div class="section-label">Verified Skills</div></div>
+      <div class="skill-tags"><span class="skill-tag verified">✓ Warehouse Ops</span><span class="skill-tag verified">✓ Event Management</span><span class="skill-tag verified">✓ Forklift</span><span class="skill-tag">Retail</span><span class="skill-tag">Food Handling</span></div>
+      <div class="menu-section">
+        <div class="section-label" style="margin-top:16px">Account</div>
+        <div class="menu-row" onclick="showToast('Opening documents…')"><div class="menu-icon"><span class="ic ic-18"><svg style="stroke:var(--ink);fill:none"><use href="#s-file"/></svg></span></div><div class="menu-label">My Documents</div><div class="menu-arrow"><span class="ic ic-16"><svg style="stroke:var(--muted);fill:none"><use href="#s-chevron"/></svg></span></div></div>
+        <div class="menu-row" onclick="showToast('Opening bank details…')"><div class="menu-icon"><span class="ic ic-18"><svg style="stroke:var(--ink);fill:none"><use href="#s-bank"/></svg></span></div><div class="menu-label">Bank Account</div><div class="menu-arrow"><span class="ic ic-16"><svg style="stroke:var(--muted);fill:none"><use href="#s-chevron"/></svg></span></div></div>
+        <div class="menu-row" onclick="showToast('2 new notifications')"><div class="menu-icon"><span class="ic ic-18"><svg style="stroke:var(--ink);fill:none"><use href="#s-bell"/></svg></span></div><div class="menu-label">Notifications</div><span class="menu-badge">2</span><div class="menu-arrow"><span class="ic ic-16"><svg style="stroke:var(--muted);fill:none"><use href="#s-chevron"/></svg></span></div></div>
+        <div class="menu-row" onclick="showToast('Opening support…')"><div class="menu-icon"><span class="ic ic-18"><svg style="stroke:var(--ink);fill:none"><use href="#s-chat"/></svg></span></div><div class="menu-label">Help & Support</div><div class="menu-arrow"><span class="ic ic-16"><svg style="stroke:var(--muted);fill:none"><use href="#s-chevron"/></svg></span></div></div>
+        <div class="menu-row" onclick="showToast('Settings opened')"><div class="menu-icon"><span class="ic ic-18"><svg style="stroke:var(--ink);fill:none"><use href="#s-settings"/></svg></span></div><div class="menu-label">Settings</div><div class="menu-arrow"><span class="ic ic-16"><svg style="stroke:var(--muted);fill:none"><use href="#s-chevron"/></svg></span></div></div>
+      </div>
+      <div style="height:8px"></div>
+    </div>
+
+    <!-- BOTTOM NAV -->
+    <div class="bottom-nav">
+      <button class="nav-item active" id="nav-home" onclick="goTo('home')"><span class="nav-icon"><svg><use href="#s-home"/></svg></span><span class="nav-label">Home</span></button>
+      <button class="nav-item" id="nav-jobs" onclick="goTo('jobs')"><span class="nav-icon"><svg><use href="#s-search"/></svg></span><span class="nav-label">Jobs</span></button>
+      <button class="nav-item" id="nav-schedule" onclick="goTo('schedule')"><span class="nav-icon"><svg><use href="#s-calendar"/></svg></span><span class="nav-label">Schedule</span></button>
+      <button class="nav-item" id="nav-earnings" onclick="goTo('earnings')"><span class="nav-icon"><svg><use href="#s-wallet"/></svg></span><span class="nav-label">Earnings</span></button>
+      <button class="nav-item" id="nav-profile" onclick="goTo('profile')"><span class="nav-icon"><svg><use href="#s-user"/></svg></span><span class="nav-label">Profile</span></button>
+    </div>
+  </div><!-- end phone -->
+
+  <!-- RIGHT: LABELS -->
+  <div style="padding-top:80px;flex:1;min-width:200px">
+    <div style="font-family:'DM Serif Display',serif;font-size:28px;letter-spacing:-1px;margin-bottom:8px">Worker App</div>
+    <div style="font-size:14px;color:#666;line-height:1.6;margin-bottom:24px">JobHop mobile app for on-demand workers. 5 screens, fully interactive.</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div onclick="goTo('home')" id="lbl-home" style="padding:12px 16px;border-radius:10px;cursor:pointer;border:2px solid #0D0D0D;background:#0D0D0D;color:white;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px"><span class="ic ic-16"><svg style="stroke:currentColor;fill:none"><use href="#s-home"/></svg></span> Home Dashboard</div>
+      <div onclick="goTo('jobs')" id="lbl-jobs" style="padding:12px 16px;border-radius:10px;cursor:pointer;border:2px solid #E5E1D8;font-size:13px;font-weight:600;color:#666;display:flex;align-items:center;gap:8px"><span class="ic ic-16"><svg style="stroke:currentColor;fill:none"><use href="#s-search"/></svg></span> Job Discovery</div>
+      <div onclick="goTo('schedule')" id="lbl-schedule" style="padding:12px 16px;border-radius:10px;cursor:pointer;border:2px solid #E5E1D8;font-size:13px;font-weight:600;color:#666;display:flex;align-items:center;gap:8px"><span class="ic ic-16"><svg style="stroke:currentColor;fill:none"><use href="#s-calendar"/></svg></span> Schedule & Shifts</div>
+      <div onclick="goTo('earnings')" id="lbl-earnings" style="padding:12px 16px;border-radius:10px;cursor:pointer;border:2px solid #E5E1D8;font-size:13px;font-weight:600;color:#666;display:flex;align-items:center;gap:8px"><span class="ic ic-16"><svg style="stroke:currentColor;fill:none"><use href="#s-wallet"/></svg></span> Earnings & Payroll</div>
+      <div onclick="goTo('profile')" id="lbl-profile" style="padding:12px 16px;border-radius:10px;cursor:pointer;border:2px solid #E5E1D8;font-size:13px;font-weight:600;color:#666;display:flex;align-items:center;gap:8px"><span class="ic ic-16"><svg style="stroke:currentColor;fill:none"><use href="#s-user"/></svg></span> Worker Profile</div>
+    </div>
+    <div style="margin-top:28px;padding:16px;background:#FFF8F4;border-radius:12px;border:1.5px solid #F0E8E0">
+      <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#E85A2A;margin-bottom:8px">Highlights</div>
+      <div style="font-size:12px;color:#666;line-height:1.8">
+        ✅ Live clock & date<br>✅ Weekly earnings KPIs<br>✅ Shift calendar strip<br>✅ Job apply flow<br>✅ Payslip breakdown<br>✅ Verified skill badges<br>✅ Toast notifications
+      </div>
+    </div>
+  </div>
+</div>
+</div><!-- end panel-worker -->
+
+<!-- ============================================================
+     PANEL 2: RECRUITER PORTAL
+     Focus: Recruiting candidates, placing them, commission tracking
+     ============================================================ -->
+<div class="panel" id="panel-recruiter">
+<div class="portal-wrap">
+  <nav class="sidebar">
+    <div class="sb-brand"><span class="dot" style="width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0"></span> JobHop</div>
+    <div class="sb-sub">Recruiter Portal</div>
+    <button class="sb-item active" id="rn-dash" onclick="rNav('dash')"><span class="ic ic-18"><svg><use href="#s-barchart"/></svg></span> Dashboard</button>
+    <button class="sb-item" id="rn-candidates" onclick="rNav('candidates')"><span class="ic ic-18"><svg><use href="#s-users"/></svg></span> Candidates <span class="sb-badge">14</span></button>
+    <button class="sb-item" id="rn-placements" onclick="rNav('placements')"><span class="ic ic-18"><svg><use href="#s-send"/></svg></span> Placements</button>
+    <button class="sb-item" id="rn-jobs" onclick="rNav('rjobs')"><span class="ic ic-18"><svg><use href="#s-briefcase"/></svg></span> Job Orders <span class="sb-badge">6</span></button>
+    <button class="sb-item" id="rn-commission" onclick="rNav('commission')"><span class="ic ic-18"><svg><use href="#s-percent"/></svg></span> Commission</button>
+  </nav>
+  <div class="portal-main">
+    <!-- R-DASHBOARD -->
+    <div class="p-screen active" id="rs-dash">
+      <div class="p-header"><div><h1>Dashboard</h1><div class="p-header-sub">Welcome back, Priya. Your recruiting pipeline at a glance.</div></div><button class="p-btn p-btn-primary" onclick="rNav('candidates')"><svg><use href="#s-plus"/></svg> Add Candidate</button></div>
+      <div class="p-stats">
+        <div class="p-stat"><div class="p-stat-label">Active Candidates</div><div class="p-stat-val">14</div><div class="p-stat-sub" style="color:var(--accent)">5 ready to place</div></div>
+        <div class="p-stat"><div class="p-stat-label">Placements (MTD)</div><div class="p-stat-val">8</div><div class="p-stat-sub up">↑ 33% vs last month</div></div>
+        <div class="p-stat"><div class="p-stat-label">Commission (MTD)</div><div class="p-stat-val" style="color:var(--accent)">$1,240</div><div class="p-stat-sub up">↑ $380 vs Feb</div></div>
+        <div class="p-stat"><div class="p-stat-label">Open Job Orders</div><div class="p-stat-val">6</div><div class="p-stat-sub" style="color:var(--muted)">70 total slots</div></div>
+      </div>
+      <div class="p-card"><div class="p-card-head"><div class="p-card-title">Recent Placements</div><button class="p-btn p-btn-ghost" onclick="rNav('placements')">View All</button></div>
+        <table class="ptable"><thead><tr><th>Worker</th><th>Placed At</th><th>Role</th><th>Start</th><th>Rate</th><th>Your Commission</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td><div style="display:flex;align-items:center;gap:10px"><div class="td-avatar" style="background:var(--accent)">ML</div><div class="td-name">Marcus Lim</div></div></td><td>DBS MBS</td><td>Event Staff</td><td>11 Mar</td><td>$15/hr</td><td style="color:var(--accent);font-weight:700">$18</td><td><span class="td-badge badge-confirmed">Confirmed</span></td></tr>
+          <tr><td><div style="display:flex;align-items:center;gap:10px"><div class="td-avatar" style="background:var(--accent2)">AT</div><div class="td-name">Aisha Tan</div></div></td><td>Lazada</td><td>Warehouse Packer</td><td>15 Mar</td><td>$12.50/hr</td><td style="color:var(--accent);font-weight:700">$15</td><td><span class="td-badge badge-confirmed">Confirmed</span></td></tr>
+          <tr><td><div style="display:flex;align-items:center;gap:10px"><div class="td-avatar" style="background:#2D9A5A">RK</div><div class="td-name">Rajesh Kumar</div></div></td><td>DBS MBS</td><td>Event Crew</td><td>18 Mar</td><td>$15/hr</td><td style="color:var(--accent);font-weight:700">$18</td><td><span class="td-badge badge-pending">Pending</span></td></tr>
+          <tr><td><div style="display:flex;align-items:center;gap:10px"><div class="td-avatar" style="background:var(--gold)">JW</div><div class="td-name">Jenny Wong</div></div></td><td>Uniqlo</td><td>Retail Associate</td><td>Ongoing</td><td>$13/hr</td><td style="color:var(--accent);font-weight:700">$15.60</td><td><span class="td-badge badge-confirmed">Active</span></td></tr>
+        </tbody></table>
+      </div>
+    </div>
+
+    <!-- R-CANDIDATES -->
+    <div class="p-screen" id="rs-candidates">
+      <div class="p-header"><div><h1>Candidates</h1><div class="p-header-sub">14 candidates in your pipeline. 5 ready for placement.</div></div><div style="display:flex;gap:8px"><button class="p-btn p-btn-ghost"><svg><use href="#s-filter"/></svg> Filter</button><button class="p-btn p-btn-primary"><svg><use href="#s-plus"/></svg> Add Candidate</button></div></div>
+      <div class="p-card">
+        <table class="ptable"><thead><tr><th>Candidate</th><th>Skills</th><th>Rating</th><th>Shifts Done</th><th>Show Rate</th><th>Pipeline Stage</th><th>Actions</th></tr></thead>
+        <tbody>
+          <tr><td><div style="display:flex;align-items:center;gap:10px"><div class="td-avatar" style="background:var(--accent)">ML</div><div><div class="td-name">Marcus Lim</div><div style="font-size:11px;color:var(--muted)">47 shifts</div></div></div></td><td><div style="display:flex;gap:4px;flex-wrap:wrap"><span class="tag">Warehouse</span><span class="tag">Events</span></div></td><td><span class="ic ic-16" style="vertical-align:middle"><svg style="fill:var(--gold);stroke:none"><use href="#s-star"/></svg></span> 4.9</td><td>47</td><td>96%</td><td><span class="td-badge badge-confirmed">Placed</span></td><td><div class="td-actions"><button class="td-btn" onclick="showToast('Viewing Marcus\'s profile…')"><span class="ic ic-16"><svg><use href="#s-eye"/></svg></span> View</button></div></td></tr>
+          <tr><td><div style="display:flex;align-items:center;gap:10px"><div class="td-avatar" style="background:#8B5CF6;color:white">DL</div><div><div class="td-name">David Lee</div><div style="font-size:11px;color:var(--muted)">12 shifts</div></div></div></td><td><div style="display:flex;gap:4px;flex-wrap:wrap"><span class="tag">Events</span><span class="tag">Retail</span></div></td><td><span class="ic ic-16" style="vertical-align:middle"><svg style="fill:var(--gold);stroke:none"><use href="#s-star"/></svg></span> 4.2</td><td>12</td><td>88%</td><td><span class="td-badge badge-open">Ready</span></td><td><div class="td-actions"><button class="td-btn accept" onclick="showToast('Placing David…')"><span class="ic ic-16"><svg style="stroke:white"><use href="#s-send"/></svg></span> Place</button><button class="td-btn" onclick="showToast('Viewing…')"><span class="ic ic-16"><svg><use href="#s-eye"/></svg></span></button></div></td></tr>
+          <tr><td><div style="display:flex;align-items:center;gap:10px"><div class="td-avatar" style="background:#EC4899;color:white">SN</div><div><div class="td-name">Siti Nurhayati</div><div style="font-size:11px;color:var(--muted)">31 shifts</div></div></div></td><td><div style="display:flex;gap:4px;flex-wrap:wrap"><span class="tag">Retail</span><span class="tag">Warehouse</span></div></td><td><span class="ic ic-16" style="vertical-align:middle"><svg style="fill:var(--gold);stroke:none"><use href="#s-star"/></svg></span> 4.8</td><td>31</td><td>100%</td><td><span class="td-badge badge-open">Ready</span></td><td><div class="td-actions"><button class="td-btn accept" onclick="showToast('Placing Siti…')"><span class="ic ic-16"><svg style="stroke:white"><use href="#s-send"/></svg></span> Place</button><button class="td-btn" onclick="showToast('Viewing…')"><span class="ic ic-16"><svg><use href="#s-eye"/></svg></span></button></div></td></tr>
+          <tr><td><div style="display:flex;align-items:center;gap:10px"><div class="td-avatar" style="background:#06B6D4;color:white">KT</div><div><div class="td-name">Kevin Teo</div><div style="font-size:11px;color:var(--muted)">New</div></div></div></td><td><div style="display:flex;gap:4px;flex-wrap:wrap"><span class="tag">Delivery</span></div></td><td>—</td><td>0</td><td>—</td><td><span class="td-badge badge-pending">Screening</span></td><td><div class="td-actions"><button class="td-btn" onclick="showToast('Opening screening form…')"><span class="ic ic-16"><svg><use href="#s-clipboard"/></svg></span> Screen</button></div></td></tr>
+        </tbody></table>
+      </div>
+    </div>
+
+    <!-- R-PLACEMENTS -->
+    <div class="p-screen" id="rs-placements">
+      <div class="p-header"><div><h1>Placements</h1><div class="p-header-sub">8 placements this month. Tracking confirmations and show rates.</div></div><button class="p-btn p-btn-ghost"><svg><use href="#s-download"/></svg> Export</button></div>
+      <div class="p-card">
+        <table class="ptable"><thead><tr><th>Worker</th><th>Client</th><th>Role</th><th>Dates</th><th>Hours</th><th>Rate</th><th>Commission</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td class="td-name">Marcus Lim</td><td>DBS MBS</td><td>Event Staff</td><td>11 Mar</td><td>8h</td><td>$15/hr</td><td style="color:var(--accent);font-weight:700">$18.00</td><td><span class="td-badge badge-confirmed">Confirmed</span></td></tr>
+          <tr><td class="td-name">Aisha Tan</td><td>Lazada</td><td>Warehouse Packer</td><td>15 Mar</td><td>9h</td><td>$12.50/hr</td><td style="color:var(--accent);font-weight:700">$15.00</td><td><span class="td-badge badge-confirmed">Confirmed</span></td></tr>
+          <tr><td class="td-name">Jenny Wong</td><td>Uniqlo</td><td>Retail Associate</td><td>Ongoing</td><td>32h/wk</td><td>$13/hr</td><td style="color:var(--accent);font-weight:700">$15.60/wk</td><td><span class="td-badge badge-confirmed">Active</span></td></tr>
+          <tr><td class="td-name">Rajesh Kumar</td><td>DBS MBS</td><td>Event Crew</td><td>18–19 Mar</td><td>20h</td><td>$15/hr</td><td style="color:var(--gold);font-weight:700">$18.00 (est)</td><td><span class="td-badge badge-pending">Pending</span></td></tr>
+        </tbody></table>
+      </div>
+    </div>
+
+    <!-- R-JOBS -->
+    <div class="p-screen" id="rs-rjobs">
+      <div class="p-header"><div><h1>Job Orders</h1><div class="p-header-sub">6 open orders from clients. Match and place candidates to earn commission.</div></div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="p-card" style="cursor:pointer" onclick="showToast('Viewing order details…')"><div style="display:flex;justify-content:space-between;margin-bottom:12px"><div><div style="font-size:18px;font-weight:700">Event Crew × 12</div><div style="font-size:13px;color:var(--muted)">DBS Marina Bay Sands</div></div><span class="td-badge badge-open">Open</span></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div><div class="sd-label">Dates</div><div style="font-size:13px;font-weight:600">18–19 Mar</div></div><div><div class="sd-label">Pay Rate</div><div style="font-size:13px;font-weight:600;color:var(--accent)">$15/hr</div></div><div><div class="sd-label">Placed</div><div style="font-size:13px;font-weight:600">3 / 12</div></div><div><div class="sd-label">Commission</div><div style="font-size:13px;font-weight:600;color:var(--accent)">$1.50/hr/worker</div></div></div><button class="p-btn p-btn-primary" style="width:100%;justify-content:center" onclick="event.stopPropagation();rNav('candidates')"><svg><use href="#s-users"/></svg> Match Candidates</button></div>
+        <div class="p-card" style="cursor:pointer" onclick="showToast('Viewing order details…')"><div style="display:flex;justify-content:space-between;margin-bottom:12px"><div><div style="font-size:18px;font-weight:700">Warehouse Packer × 20</div><div style="font-size:13px;color:var(--muted)">Lazada Fulfillment</div></div><span class="td-badge badge-pending">2 spots left</span></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div><div class="sd-label">Dates</div><div style="font-size:13px;font-weight:600">15 Mar onwards</div></div><div><div class="sd-label">Pay Rate</div><div style="font-size:13px;font-weight:600;color:var(--accent)">$12.50/hr</div></div><div><div class="sd-label">Placed</div><div style="font-size:13px;font-weight:600;color:#2D9A5A">18 / 20</div></div><div><div class="sd-label">Commission</div><div style="font-size:13px;font-weight:600;color:var(--accent)">$1.25/hr/worker</div></div></div><button class="p-btn p-btn-ghost" style="width:100%;justify-content:center" onclick="event.stopPropagation();rNav('candidates')"><svg><use href="#s-users"/></svg> Fill Remaining</button></div>
+        <div class="p-card" style="cursor:pointer" onclick="showToast('Viewing order details…')"><div style="display:flex;justify-content:space-between;margin-bottom:12px"><div><div style="font-size:18px;font-weight:700">Retail Associate × 8</div><div style="font-size:13px;color:var(--muted)">Uniqlo · Orchard Road</div></div><span class="td-badge badge-confirmed">Active</span></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div><div class="sd-label">Dates</div><div style="font-size:13px;font-weight:600">Ongoing</div></div><div><div class="sd-label">Pay Rate</div><div style="font-size:13px;font-weight:600;color:var(--accent)">$13/hr</div></div><div><div class="sd-label">Placed</div><div style="font-size:13px;font-weight:600">5 / 8</div></div><div><div class="sd-label">Commission</div><div style="font-size:13px;font-weight:600;color:var(--accent)">$1.30/hr/worker</div></div></div><button class="p-btn p-btn-ghost" style="width:100%;justify-content:center" onclick="event.stopPropagation();rNav('candidates')"><svg><use href="#s-users"/></svg> Fill Remaining</button></div>
+      </div>
+    </div>
+
+    <!-- R-COMMISSION -->
+    <div class="p-screen" id="rs-commission">
+      <div class="p-header"><div><h1>Commission</h1><div class="p-header-sub">Your earnings from successful placements.</div></div><button class="p-btn p-btn-ghost"><svg><use href="#s-download"/></svg> Export</button></div>
+      <div class="p-stats">
+        <div class="p-stat"><div class="p-stat-label">This Month</div><div class="p-stat-val" style="color:var(--accent)">$1,240</div><div class="p-stat-sub">8 placements</div></div>
+        <div class="p-stat"><div class="p-stat-label">Last Month</div><div class="p-stat-val">$860</div><div class="p-stat-sub">6 placements</div></div>
+        <div class="p-stat"><div class="p-stat-label">All Time</div><div class="p-stat-val">$8,420</div><div class="p-stat-sub">Since Oct 2025</div></div>
+        <div class="p-stat"><div class="p-stat-label">Avg per Placement</div><div class="p-stat-val">$155</div><div class="p-stat-sub up">↑ $12 vs avg</div></div>
+      </div>
+      <div class="p-card"><div class="p-card-head"><div class="p-card-title">Commission Breakdown</div></div>
+        <table class="ptable"><thead><tr><th>Period</th><th>Placements</th><th>Total Worker Hours</th><th>Commission Rate</th><th>Earned</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td class="td-name">Week 11 (Mar 11–17)</td><td>3</td><td>37 hrs</td><td>$1.25–$1.50/hr</td><td style="font-weight:700;color:var(--accent)">$480</td><td><span class="td-badge badge-pending">Processing</span></td></tr>
+          <tr><td class="td-name">Week 10 (Mar 4–10)</td><td>3</td><td>52 hrs</td><td>$1.25–$1.50/hr</td><td style="font-weight:700;color:var(--accent)">$420</td><td><span class="td-badge badge-confirmed">Paid</span></td></tr>
+          <tr><td class="td-name">Week 9 (Feb 26–Mar 3)</td><td>2</td><td>28 hrs</td><td>$1.30/hr</td><td style="font-weight:700;color:var(--accent)">$340</td><td><span class="td-badge badge-confirmed">Paid</span></td></tr>
+        </tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+</div><!-- end panel-recruiter -->
+
+<!-- ============================================================
+     PANEL 3: AGENCY PORTAL
+     Focus: Client management, shift scheduling, worker roster,
+     timesheets. Can be opened to clients themselves.
+     ============================================================ -->
+<div class="panel" id="panel-agency">
+<div class="portal-wrap">
+  <nav class="sidebar">
+    <div class="sb-brand"><span class="dot" style="width:8px;height:8px;border-radius:50%;background:var(--accent2);flex-shrink:0"></span> JobHop</div>
+    <div class="sb-sub">Agency / Client Portal</div>
+    <button class="sb-item active" id="an-dash" onclick="aNav('adash')"><span class="ic ic-18"><svg><use href="#s-barchart"/></svg></span> Dashboard</button>
+    <button class="sb-item" id="an-clients" onclick="aNav('clients')"><span class="ic ic-18"><svg><use href="#s-building"/></svg></span> Clients <span class="sb-badge" style="background:var(--accent2)">4</span></button>
+    <button class="sb-item" id="an-shifts" onclick="aNav('shifts')"><span class="ic ic-18"><svg><use href="#s-calendar"/></svg></span> Shift Management</button>
+    <button class="sb-item" id="an-roster" onclick="aNav('roster')"><span class="ic ic-18"><svg><use href="#s-users"/></svg></span> Worker Roster</button>
+    <button class="sb-item" id="an-timesheets" onclick="aNav('timesheets')"><span class="ic ic-18"><svg><use href="#s-clock"/></svg></span> Timesheets</button>
+    <button class="sb-item" id="an-billing" onclick="aNav('billing')"><span class="ic ic-18"><svg><use href="#s-dollar"/></svg></span> Billing</button>
+  </nav>
+  <div class="portal-main">
+    <!-- A-DASHBOARD -->
+    <div class="p-screen active" id="as-adash">
+      <div class="p-header"><div><h1>Agency Dashboard</h1><div class="p-header-sub">Hi Sarah. Operational overview for MCI Workforce Solutions.</div></div><button class="p-btn p-btn-primary" onclick="aNav('shifts')"><svg><use href="#s-plus"/></svg> Create Shift</button></div>
+      <div class="p-stats">
+        <div class="p-stat"><div class="p-stat-label">Active Clients</div><div class="p-stat-val">4</div><div class="p-stat-sub" style="color:var(--accent2)">2 new this quarter</div></div>
+        <div class="p-stat"><div class="p-stat-label">Shifts This Week</div><div class="p-stat-val">12</div><div class="p-stat-sub" style="color:var(--muted)">across 3 clients</div></div>
+        <div class="p-stat"><div class="p-stat-label">Workers Deployed</div><div class="p-stat-val">38</div><div class="p-stat-sub up">96% show rate</div></div>
+        <div class="p-stat"><div class="p-stat-label">Revenue (MTD)</div><div class="p-stat-val" style="color:var(--accent)">$24,600</div><div class="p-stat-sub up">↑ 18% vs Feb</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div class="p-card"><div class="p-card-head"><div class="p-card-title">Upcoming Shifts</div><button class="p-btn p-btn-ghost" onclick="aNav('shifts')">View All</button></div>
+          <table class="ptable"><thead><tr><th>Shift</th><th>Client</th><th>Date</th><th>Workers</th><th>Fill</th></tr></thead>
+          <tbody>
+            <tr><td class="td-name">Event Staff</td><td>DBS MBS</td><td>11 Mar</td><td>8/12</td><td><div class="progress-bar"><div class="progress-fill" style="width:67%;background:var(--accent)"></div></div></td></tr>
+            <tr><td class="td-name">Warehouse</td><td>Lazada</td><td>15 Mar</td><td>18/20</td><td><div class="progress-bar"><div class="progress-fill" style="width:90%;background:var(--green)"></div></div></td></tr>
+            <tr><td class="td-name">Event Crew</td><td>DBS MBS</td><td>18–19 Mar</td><td>3/12</td><td><div class="progress-bar"><div class="progress-fill" style="width:25%;background:#F87171"></div></div></td></tr>
+          </tbody></table>
+        </div>
+        <div class="p-card"><div class="p-card-head"><div class="p-card-title">Pending Timesheets</div><button class="p-btn p-btn-ghost" onclick="aNav('timesheets')">Review All</button></div>
+          <table class="ptable"><thead><tr><th>Worker</th><th>Shift</th><th>Hours</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td class="td-name">Marcus Lim</td><td>Warehouse Lead</td><td>4h (ongoing)</td><td><span class="td-badge pill-green">Clocked In</span></td></tr>
+            <tr><td class="td-name">Aisha Tan</td><td>Warehouse Packer</td><td>8h</td><td><span class="td-badge badge-pending">Pending Review</span></td></tr>
+            <tr><td class="td-name">Jenny Wong</td><td>Retail Associate</td><td>6h</td><td><span class="td-badge badge-confirmed">Approved</span></td></tr>
+          </tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- A-CLIENTS -->
+    <div class="p-screen" id="as-clients">
+      <div class="p-header"><div><h1>Clients</h1><div class="p-header-sub">Manage your client accounts. Clients can also self-serve via their own portal login.</div></div><button class="p-btn p-btn-primary"><svg><use href="#s-plus"/></svg> Add Client</button></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="p-card"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px"><div><div style="font-size:18px;font-weight:700">DBS Marina Bay Sands</div><div style="font-size:13px;color:var(--muted)">Events & Hospitality</div></div><span class="td-badge badge-confirmed">Active</span></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px"><div><div class="sd-label">Open Shifts</div><div style="font-size:14px;font-weight:600">3</div></div><div><div class="sd-label">Workers Deployed</div><div style="font-size:14px;font-weight:600">11</div></div><div><div class="sd-label">This Month Revenue</div><div style="font-size:14px;font-weight:600;color:var(--accent)">$8,400</div></div><div><div class="sd-label">Client Since</div><div style="font-size:14px;font-weight:600">Nov 2024</div></div></div><div style="display:flex;gap:8px"><button class="p-btn p-btn-ghost" style="flex:1;justify-content:center" onclick="aNav('shifts')">Manage Shifts</button><button class="p-btn p-btn-ghost" onclick="showToast('Opening client portal…')">Client Login</button></div></div>
+        <div class="p-card"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px"><div><div style="font-size:18px;font-weight:700">Lazada Fulfillment</div><div style="font-size:13px;color:var(--muted)">Logistics & Warehousing</div></div><span class="td-badge badge-confirmed">Active</span></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px"><div><div class="sd-label">Open Shifts</div><div style="font-size:14px;font-weight:600">1</div></div><div><div class="sd-label">Workers Deployed</div><div style="font-size:14px;font-weight:600">18</div></div><div><div class="sd-label">This Month Revenue</div><div style="font-size:14px;font-weight:600;color:var(--accent)">$9,200</div></div><div><div class="sd-label">Client Since</div><div style="font-size:14px;font-weight:600">Jan 2025</div></div></div><div style="display:flex;gap:8px"><button class="p-btn p-btn-ghost" style="flex:1;justify-content:center" onclick="aNav('shifts')">Manage Shifts</button><button class="p-btn p-btn-ghost" onclick="showToast('Opening client portal…')">Client Login</button></div></div>
+        <div class="p-card"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px"><div><div style="font-size:18px;font-weight:700">Uniqlo Singapore</div><div style="font-size:13px;color:var(--muted)">Retail</div></div><span class="td-badge badge-confirmed">Active</span></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px"><div><div class="sd-label">Open Shifts</div><div style="font-size:14px;font-weight:600">2</div></div><div><div class="sd-label">Workers Deployed</div><div style="font-size:14px;font-weight:600">5</div></div><div><div class="sd-label">This Month Revenue</div><div style="font-size:14px;font-weight:600;color:var(--accent)">$4,800</div></div><div><div class="sd-label">Client Since</div><div style="font-size:14px;font-weight:600">Mar 2025</div></div></div><div style="display:flex;gap:8px"><button class="p-btn p-btn-ghost" style="flex:1;justify-content:center" onclick="aNav('shifts')">Manage Shifts</button><button class="p-btn p-btn-ghost" onclick="showToast('Opening client portal…')">Client Login</button></div></div>
+        <div class="p-card"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px"><div><div style="font-size:18px;font-weight:700">GrabFood Singapore</div><div style="font-size:13px;color:var(--muted)">Delivery / Logistics</div></div><span class="td-badge badge-pending">Onboarding</span></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px"><div><div class="sd-label">Open Shifts</div><div style="font-size:14px;font-weight:600">0</div></div><div><div class="sd-label">Workers Deployed</div><div style="font-size:14px;font-weight:600">0</div></div><div><div class="sd-label">Est. Monthly Revenue</div><div style="font-size:14px;font-weight:600;color:var(--gold)">$12,000</div></div><div><div class="sd-label">Client Since</div><div style="font-size:14px;font-weight:600">Mar 2026</div></div></div><div style="display:flex;gap:8px"><button class="p-btn p-btn-primary" style="flex:1;justify-content:center" onclick="showToast('Onboarding form sent')">Complete Onboarding</button></div></div>
+      </div>
+    </div>
+
+    <!-- A-SHIFTS -->
+    <div class="p-screen" id="as-shifts">
+      <div class="p-header"><div><h1>Shift Management</h1><div class="p-header-sub">Create, assign, and track all shifts across clients.</div></div><button class="p-btn p-btn-primary" onclick="showToast('Create Shift form coming soon')"><svg><use href="#s-plus"/></svg> Create Shift</button></div>
+      <div class="p-card">
+        <table class="ptable"><thead><tr><th>Shift</th><th>Client</th><th>Location</th><th>Date</th><th>Time</th><th>Workers</th><th>Fill Rate</th><th>Actions</th></tr></thead>
+        <tbody>
+          <tr><td class="td-name">Warehouse Lead</td><td>Lazada</td><td>Tuas</td><td>10 Mar</td><td>9am–1pm</td><td>3/3</td><td><div class="progress-bar"><div class="progress-fill" style="width:100%;background:var(--green)"></div></div></td><td><span class="td-badge badge-confirmed">Full</span></td></tr>
+          <tr><td class="td-name">Event Staff</td><td>DBS MBS</td><td>Marina Bay</td><td>11 Mar</td><td>2pm–10pm</td><td>8/12</td><td><div class="progress-bar"><div class="progress-fill" style="width:67%;background:var(--accent)"></div></div></td><td><button class="td-btn" onclick="showToast('Assigning workers…')">Assign</button></td></tr>
+          <tr><td class="td-name">Warehouse Packing</td><td>Lazada</td><td>Jurong East</td><td>15 Mar</td><td>8am–4pm</td><td>18/20</td><td><div class="progress-bar"><div class="progress-fill" style="width:90%;background:var(--green)"></div></div></td><td><button class="td-btn" onclick="showToast('Assigning workers…')">Assign</button></td></tr>
+          <tr><td class="td-name">Event Crew</td><td>DBS MBS</td><td>CBD</td><td>18–19 Mar</td><td>9am–7pm</td><td>3/12</td><td><div class="progress-bar"><div class="progress-fill" style="width:25%;background:#F87171"></div></div></td><td><button class="td-btn" onclick="showToast('Assigning workers…')">Assign</button></td></tr>
+          <tr><td class="td-name">Retail Floor</td><td>Uniqlo</td><td>Orchard Rd</td><td>Ongoing</td><td>Flexible</td><td>5/8</td><td><div class="progress-bar"><div class="progress-fill" style="width:62%;background:var(--accent)"></div></div></td><td><button class="td-btn" onclick="showToast('Assigning workers…')">Assign</button></td></tr>
+        </tbody></table>
+      </div>
+    </div>
+
+    <!-- A-ROSTER -->
+    <div class="p-screen" id="as-roster">
+      <div class="p-header"><div><h1>Worker Roster</h1><div class="p-header-sub">All workers across all clients. Assign availability and deployments.</div></div><button class="p-btn p-btn-ghost"><svg><use href="#s-filter"/></svg> Filter</button></div>
+      <div class="p-card">
+        <table class="ptable"><thead><tr><th>Worker</th><th>Current Assignment</th><th>Skills</th><th>Rating</th><th>Show Rate</th><th>Availability</th><th></th></tr></thead>
+        <tbody>
+          <tr><td><div style="display:flex;align-items:center;gap:10px"><div class="td-avatar" style="background:var(--accent)">ML</div><div class="td-name">Marcus Lim</div></div></td><td>Warehouse Lead @ Lazada</td><td><span class="tag">Warehouse</span><span class="tag">Events</span></td><td><span class="ic ic-16" style="vertical-align:middle"><svg style="fill:var(--gold);stroke:none"><use href="#s-star"/></svg></span> 4.9</td><td>96%</td><td><span class="td-badge pill-green">Available</span></td><td><button class="td-btn" onclick="showToast('Opening profile…')">View</button></td></tr>
+          <tr><td><div style="display:flex;align-items:center;gap:10px"><div class="td-avatar" style="background:var(--accent2)">AT</div><div class="td-name">Aisha Tan</div></div></td><td>—</td><td><span class="tag">Warehouse</span></td><td><span class="ic ic-16" style="vertical-align:middle"><svg style="fill:var(--gold);stroke:none"><use href="#s-star"/></svg></span> 4.7</td><td>92%</td><td><span class="td-badge pill-green">Available</span></td><td><button class="td-btn" onclick="showToast('Opening profile…')">View</button></td></tr>
+          <tr><td><div style="display:flex;align-items:center;gap:10px"><div class="td-avatar" style="background:#2D9A5A">RK</div><div class="td-name">Rajesh Kumar</div></div></td><td>Event Crew @ DBS (18 Mar)</td><td><span class="tag">Events</span></td><td><span class="ic ic-16" style="vertical-align:middle"><svg style="fill:var(--gold);stroke:none"><use href="#s-star"/></svg></span> 4.5</td><td>94%</td><td><span class="td-badge badge-pending">Assigned</span></td><td><button class="td-btn" onclick="showToast('Opening profile…')">View</button></td></tr>
+          <tr><td><div style="display:flex;align-items:center;gap:10px"><div class="td-avatar" style="background:var(--gold)">JW</div><div class="td-name">Jenny Wong</div></div></td><td>Retail @ Uniqlo (ongoing)</td><td><span class="tag">Retail</span><span class="tag">F&B</span></td><td><span class="ic ic-16" style="vertical-align:middle"><svg style="fill:var(--gold);stroke:none"><use href="#s-star"/></svg></span> 4.8</td><td>98%</td><td><span class="td-badge badge-pending">Deployed</span></td><td><button class="td-btn" onclick="showToast('Opening profile…')">View</button></td></tr>
+          <tr><td><div style="display:flex;align-items:center;gap:10px"><div class="td-avatar" style="background:#EC4899;color:white">SN</div><div class="td-name">Siti Nurhayati</div></div></td><td>—</td><td><span class="tag">Retail</span><span class="tag">Warehouse</span></td><td><span class="ic ic-16" style="vertical-align:middle"><svg style="fill:var(--gold);stroke:none"><use href="#s-star"/></svg></span> 4.8</td><td>100%</td><td><span class="td-badge pill-green">Available</span></td><td><button class="td-btn" onclick="showToast('Opening profile…')">View</button></td></tr>
+        </tbody></table>
+      </div>
+    </div>
+
+    <!-- A-TIMESHEETS -->
+    <div class="p-screen" id="as-timesheets">
+      <div class="p-header"><div><h1>Timesheets</h1><div class="p-header-sub">Review, approve, and flag timesheet submissions.</div></div><div style="display:flex;gap:8px"><button class="p-btn p-btn-ghost"><svg><use href="#s-filter"/></svg> Filter</button><button class="p-btn p-btn-ghost"><svg><use href="#s-download"/></svg> Export</button></div></div>
+      <div class="p-card">
+        <table class="ptable"><thead><tr><th>Worker</th><th>Shift</th><th>Client</th><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Total Hrs</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>
+          <tr><td class="td-name">Marcus Lim</td><td>Warehouse Lead</td><td>Lazada</td><td>10 Mar</td><td>9:02am</td><td>—</td><td>4h (live)</td><td><span class="td-badge pill-green">Clocked In</span></td><td>—</td></tr>
+          <tr><td class="td-name">Aisha Tan</td><td>Warehouse Packer</td><td>Lazada</td><td>9 Mar</td><td>8:05am</td><td>5:10pm</td><td>9h 5m</td><td><span class="td-badge badge-pending">Pending</span></td><td><div class="td-actions"><button class="td-btn accept" onclick="handleTimesheet(this,'approved')">Approve</button><button class="td-btn reject" onclick="handleTimesheet(this,'flagged')">Flag</button></div></td></tr>
+          <tr><td class="td-name">Jenny Wong</td><td>Retail Associate</td><td>Uniqlo</td><td>9 Mar</td><td>10:00am</td><td>4:02pm</td><td>6h 2m</td><td><span class="td-badge badge-confirmed">Approved</span></td><td><button class="td-btn" onclick="showToast('Viewing details…')">View</button></td></tr>
+          <tr><td class="td-name">Rajesh Kumar</td><td>Event Staff</td><td>DBS MBS</td><td>8 Mar</td><td>2:00pm</td><td>10:15pm</td><td>8h 15m</td><td><span class="td-badge badge-confirmed">Approved</span></td><td><button class="td-btn" onclick="showToast('Viewing details…')">View</button></td></tr>
+        </tbody></table>
+      </div>
+    </div>
+
+    <!-- A-BILLING -->
+    <div class="p-screen" id="as-billing">
+      <div class="p-header"><div><h1>Billing</h1><div class="p-header-sub">Invoicing and revenue tracking across clients.</div></div><button class="p-btn p-btn-primary" onclick="showToast('Generating invoices…')"><svg><use href="#s-file"/></svg> Generate Invoice</button></div>
+      <div class="p-stats">
+        <div class="p-stat"><div class="p-stat-label">Revenue (MTD)</div><div class="p-stat-val" style="color:var(--accent)">$24,600</div><div class="p-stat-sub">March 2026</div></div>
+        <div class="p-stat"><div class="p-stat-label">Outstanding</div><div class="p-stat-val" style="color:var(--gold)">$6,200</div><div class="p-stat-sub">2 invoices pending</div></div>
+        <div class="p-stat"><div class="p-stat-label">Collected</div><div class="p-stat-val" style="color:#2D9A5A">$18,400</div><div class="p-stat-sub">All on time</div></div>
+        <div class="p-stat"><div class="p-stat-label">Avg Bill Rate</div><div class="p-stat-val">$18.50</div><div class="p-stat-sub">/hr (blended)</div></div>
+      </div>
+      <div class="p-card"><div class="p-card-head"><div class="p-card-title">Invoices</div></div>
+        <table class="ptable"><thead><tr><th>Invoice #</th><th>Client</th><th>Period</th><th>Hours</th><th>Amount</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td class="td-name">INV-2026-031</td><td>DBS Marina Bay Sands</td><td>1–15 Mar</td><td>264 hrs</td><td style="font-weight:700">$4,884</td><td><span class="td-badge badge-confirmed">Paid</span></td></tr>
+          <tr><td class="td-name">INV-2026-032</td><td>Lazada Fulfillment</td><td>1–15 Mar</td><td>480 hrs</td><td style="font-weight:700">$7,200</td><td><span class="td-badge badge-confirmed">Paid</span></td></tr>
+          <tr><td class="td-name">INV-2026-033</td><td>Uniqlo Singapore</td><td>1–15 Mar</td><td>160 hrs</td><td style="font-weight:700">$2,880</td><td><span class="td-badge badge-pending">Pending</span></td></tr>
+          <tr><td class="td-name">INV-2026-034</td><td>DBS Marina Bay Sands</td><td>16–31 Mar</td><td>Est. 200 hrs</td><td style="font-weight:700;color:var(--gold)">$3,700 (est)</td><td><span class="td-badge" style="background:var(--cream);color:var(--muted)">Draft</span></td></tr>
+        </tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+</div><!-- end panel-agency -->
+
+</div><!-- end panel-area -->
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+  // ============================================================
+  // CLOCK
+  // ============================================================
+  function tick() {
+    const now = new Date();
+    document.getElementById('clock').textContent = now.toLocaleTimeString('en-SG', {hour:'2-digit',minute:'2-digit'});
+  }
+  setInterval(tick, 1000); tick();
+
+  // ============================================================
+  // VIEW SWITCHER
+  // ============================================================
+  function switchView(v) {
+    document.querySelectorAll('.vb-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    const idx = v === 'worker' ? 0 : v === 'recruiter' ? 1 : 2;
+    document.querySelectorAll('.vb-tab')[idx].classList.add('active');
+    document.getElementById('panel-' + v).classList.add('active');
+  }
+
+  // ============================================================
+  // WORKER SCREEN NAV (preserved from original)
+  // ============================================================
+  const screens = ['home','jobs','schedule','earnings','profile'];
+  const titles = {
+    home: ['Good morning','Tuesday, 10 March 2026'],
+    jobs: ['Find Jobs','Match your skills & schedule'],
+    schedule: ['My Schedule','Week of 10 March 2026'],
+    earnings: ['Earnings','Track your income'],
+    profile: ['Marcus Lim','On-Demand Worker']
+  };
+  function goTo(name) {
+    screens.forEach(s => {
+      document.getElementById('screen-'+s).classList.remove('active');
+      document.getElementById('nav-'+s).classList.remove('active');
+      const lbl = document.getElementById('lbl-'+s);
+      if (lbl) { lbl.style.background=''; lbl.style.color='#666'; lbl.style.border='2px solid #E5E1D8'; }
+    });
+    document.getElementById('screen-'+name).classList.add('active');
+    document.getElementById('nav-'+name).classList.add('active');
+    document.getElementById('screen-title').textContent = titles[name][0];
+    document.getElementById('screen-sub').textContent = titles[name][1];
+    const lbl = document.getElementById('lbl-'+name);
+    if (lbl) { lbl.style.background='#0D0D0D'; lbl.style.color='white'; lbl.style.border='2px solid #0D0D0D'; }
+  }
+  document.querySelectorAll('.filter-chip').forEach(chip => {
+    chip.addEventListener('click', function() { document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active')); this.classList.add('active'); });
+  });
+  document.querySelectorAll('.earn-tab').forEach(tab => {
+    tab.addEventListener('click', function() { document.querySelectorAll('.earn-tab').forEach(t => t.classList.remove('active')); this.classList.add('active'); });
+  });
+
+  // ============================================================
+  // RECRUITER NAV
+  // ============================================================
+  const rScreens = ['dash','candidates','placements','rjobs','commission'];
+  function rNav(name) {
+    rScreens.forEach(s => {
+      const el = document.getElementById('rs-'+s); if (el) el.classList.remove('active');
+      const nav = document.getElementById('rn-'+s); if (nav) nav.classList.remove('active');
+    });
+    const el = document.getElementById('rs-'+name); if (el) el.classList.add('active');
+    const nav = document.getElementById('rn-'+name); if (nav) nav.classList.add('active');
+  }
+
+  // ============================================================
+  // AGENCY NAV
+  // ============================================================
+  const aScreens = ['adash','clients','shifts','roster','timesheets','billing'];
+  function aNav(name) {
+    aScreens.forEach(s => {
+      const el = document.getElementById('as-'+s); if (el) el.classList.remove('active');
+      const nav = document.getElementById('an-'+s); if (nav) nav.classList.remove('active');
+    });
+    const el = document.getElementById('as-'+name); if (el) el.classList.add('active');
+    const nav = document.getElementById('an-'+name); if (nav) nav.classList.add('active');
+  }
+
+  // ============================================================
+  // TIMESHEET APPROVE/FLAG
+  // ============================================================
+  function handleTimesheet(btn, action) {
+    const row = btn.closest('tr');
+    const statusCell = row.querySelector('.td-badge');
+    const actionsCell = row.querySelector('.td-actions');
+    if (action === 'approved') {
+      statusCell.className = 'td-badge badge-confirmed';
+      statusCell.textContent = 'Approved';
+      actionsCell.innerHTML = '<button class="td-btn" onclick="showToast(\'Viewing details…\')">View</button>';
+      showToast('Timesheet approved!');
+    } else {
+      statusCell.className = 'td-badge';
+      statusCell.style.background = 'rgba(248,113,113,.1)';
+      statusCell.style.color = '#F87171';
+      statusCell.textContent = 'Flagged';
+      actionsCell.innerHTML = '<button class="td-btn" onclick="showToast(\'Viewing details…\')">View</button>';
+      showToast('Timesheet flagged for review.');
+    }
+  }
+
+  // ============================================================
+  // TOAST
+  // ============================================================
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+  }
+</script>
+</body>
+</html>

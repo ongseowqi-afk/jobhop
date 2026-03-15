@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #0D0D0D;
+  --color-paper: #F5F2EC;
+  --color-cream: #EDE9DF;
+  --color-accent: #E85A2A;
+  --color-accent2: #2A7AE8;
+  --color-gold: #C8A84B;
+  --color-green: #4ADE80;
+  --color-muted: #8B8580;
+  --color-card: #FFFFFF;
+  --color-border: rgba(13, 13, 13, 0.10);
+
+  --font-heading: "DM Serif Display", serif;
+  --font-body: "DM Sans", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+body {
+  font-family: var(--font-body);
+}

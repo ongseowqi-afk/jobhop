@@ -1,0 +1,46 @@
+{
+  "expo": {
+    "name": "JobHop",
+    "slug": "jobhop-worker",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "jobhop",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#F5F2EC",
+      "resizeMode": "contain"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.jobhop.worker"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#F5F2EC"
+      },
+      "package": "com.jobhop.worker"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow JobHop to access your photos for document upload.",
+          "cameraPermission": "Allow JobHop to use your camera for document upload."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow JobHop to use your camera to scan QR codes for clock-in."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

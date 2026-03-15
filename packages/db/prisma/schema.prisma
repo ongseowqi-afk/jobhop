@@ -1,0 +1,378 @@
+// JobHop Database Schema — MVP
+// Freelance contractors, no CPF. MOM eligibility verification required.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  WORKER
+  RECRUITER
+  AGENCY
+  CLIENT
+}
+
+enum ResidencyStatus {
+  CITIZEN
+  PR
+  STUDENT_PASS
+  DEPENDANT_PASS
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING_VERIFICATION
+  VERIFIED
+  REJECTED
+}
+
+enum JobStatus {
+  DRAFT
+  OPEN
+  FILLING
+  FULL
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ApplicationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+enum AssignmentStatus {
+  CONFIRMED
+  CLOCKED_IN
+  CLOCKED_OUT
+  NO_SHOW
+  CANCELLED
+}
+
+enum PlacementStatus {
+  PENDING
+  CONFIRMED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum TimesheetStatus {
+  PENDING
+  APPROVED
+  FLAGGED
+  REJECTED
+}
+
+enum EarningStatus {
+  PROCESSING
+  PAID
+}
+
+enum InvoiceStatus {
+  DRAFT
+  PENDING
+  PAID
+  OVERDUE
+}
+
+enum DocumentType {
+  NRIC_FRONT
+  NRIC_BACK
+  STUDENT_PASS
+  LETTER_OF_CONSENT
+  DEPENDANT_PASS
+  OTHER_CERT
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String?  @unique
+  phone     String?  @unique
+  name      String
+  role      UserRole
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workerProfile    WorkerProfile?
+  recruiterProfile RecruiterProfile?
+  agencyProfile    AgencyProfile?
+  clientProfile    ClientProfile?
+  notifications    Notification[]
+}
+
+model WorkerProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  residencyStatus    ResidencyStatus?
+  verificationStatus VerificationStatus @default(UNVERIFIED)
+  verifiedAt         DateTime?
+  verifiedBy         String?
+  rejectionReason    String?
+
+  contractorAgreed   Boolean  @default(false)
+  contractorAgreedAt DateTime?
+
+  isStudentPass  Boolean   @default(false)
+  schoolName     String?
+  locExpiryDate  DateTime?
+  weeklyHoursCap Int?
+
+  rating      Float   @default(0)
+  reviewCount Int     @default(0)
+  showRate    Float   @default(100)
+  shiftsCount Int     @default(0)
+  totalEarned Float   @default(0)
+  isAvailable Boolean @default(true)
+  bankAccount Json?
+
+  skills       WorkerSkill[]
+  documents    Document[]
+  applications Application[]
+  assignments  ShiftAssignment[]
+  timesheets   Timesheet[]
+  earnings     Earning[]
+}
+
+model RecruiterProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  agencyId        String?
+  agency          Agency?     @relation(fields: [agencyId], references: [id])
+  totalCommission Float       @default(0)
+  placements      Placement[]
+}
+
+model AgencyProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  agencyId String
+  agency   Agency @relation(fields: [agencyId], references: [id])
+}
+
+model ClientProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id])
+}
+
+model Agency {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  recruiters RecruiterProfile[]
+  staff      AgencyProfile[]
+  clients    Client[]
+}
+
+model Client {
+  id           String   @id @default(cuid())
+  name         String
+  industry     String
+  agencyId     String
+  agency       Agency   @relation(fields: [agencyId], references: [id])
+  contactName  String
+  contactEmail String
+  contactPhone String?
+  createdAt    DateTime @default(now())
+
+  jobs        Job[]
+  invoices    Invoice[]
+  clientUsers ClientProfile[]
+}
+
+model Skill {
+  id   String @id @default(cuid())
+  name String @unique
+
+  workers WorkerSkill[]
+  jobs    JobSkillRequirement[]
+}
+
+model WorkerSkill {
+  id       String        @id @default(cuid())
+  workerId String
+  worker   WorkerProfile @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  skillId  String
+  skill    Skill         @relation(fields: [skillId], references: [id])
+  verified Boolean       @default(false)
+
+  @@unique([workerId, skillId])
+}
+
+model Job {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  clientId    String
+  client      Client    @relation(fields: [clientId], references: [id])
+  category    String
+  location    String
+  latitude    Float?
+  longitude   Float?
+  payRate     Float
+  slotsTotal  Int
+  slotsFilled Int       @default(0)
+  status      JobStatus @default(OPEN)
+  startDate   DateTime
+  endDate     DateTime?
+  isOngoing   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  requiredSkills JobSkillRequirement[]
+  shifts         Shift[]
+  applications   Application[]
+  placements     Placement[]
+}
+
+model JobSkillRequirement {
+  id      String @id @default(cuid())
+  jobId   String
+  job     Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  skillId String
+  skill   Skill  @relation(fields: [skillId], references: [id])
+
+  @@unique([jobId, skillId])
+}
+
+model Shift {
+  id          String   @id @default(cuid())
+  jobId       String
+  job         Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  date        DateTime
+  startTime   String
+  endTime     String
+  slotsTotal  Int
+  slotsFilled Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  assignments ShiftAssignment[]
+  timesheets  Timesheet[]
+}
+
+model Application {
+  id         String            @id @default(cuid())
+  workerId   String
+  worker     WorkerProfile     @relation(fields: [workerId], references: [id])
+  jobId      String
+  job        Job               @relation(fields: [jobId], references: [id])
+  status     ApplicationStatus @default(PENDING)
+  appliedAt  DateTime          @default(now())
+  reviewedAt DateTime?
+  reviewedBy String?
+
+  @@unique([workerId, jobId])
+}
+
+model ShiftAssignment {
+  id       String           @id @default(cuid())
+  shiftId  String
+  shift    Shift            @relation(fields: [shiftId], references: [id])
+  workerId String
+  worker   WorkerProfile    @relation(fields: [workerId], references: [id])
+  status   AssignmentStatus @default(CONFIRMED)
+
+  @@unique([shiftId, workerId])
+}
+
+model Placement {
+  id              String           @id @default(cuid())
+  recruiterId     String
+  recruiter       RecruiterProfile @relation(fields: [recruiterId], references: [id])
+  workerId        String
+  jobId           String
+  job             Job              @relation(fields: [jobId], references: [id])
+  commissionRate  Float
+  totalCommission Float            @default(0)
+  totalHours      Float            @default(0)
+  status          PlacementStatus  @default(PENDING)
+  createdAt       DateTime         @default(now())
+
+  @@unique([workerId, jobId])
+}
+
+model Timesheet {
+  id         String          @id @default(cuid())
+  workerId   String
+  worker     WorkerProfile   @relation(fields: [workerId], references: [id])
+  shiftId    String
+  shift      Shift           @relation(fields: [shiftId], references: [id])
+  clockIn    DateTime
+  clockOut   DateTime?
+  totalHours Float?
+  status     TimesheetStatus @default(PENDING)
+  approvedBy String?
+  approvedAt DateTime?
+
+  @@unique([workerId, shiftId])
+}
+
+model Earning {
+  id          String        @id @default(cuid())
+  workerId    String
+  worker      WorkerProfile @relation(fields: [workerId], references: [id])
+  periodStart DateTime
+  periodEnd   DateTime
+  grossAmount Float
+  bonus       Float         @default(0)
+  netAmount   Float
+  status      EarningStatus @default(PROCESSING)
+  paidAt      DateTime?
+}
+
+model Invoice {
+  id          String        @id @default(cuid())
+  invoiceNo   String        @unique
+  clientId    String
+  client      Client        @relation(fields: [clientId], references: [id])
+  periodStart DateTime
+  periodEnd   DateTime
+  totalHours  Float
+  billRate    Float
+  amount      Float
+  status      InvoiceStatus @default(DRAFT)
+  createdAt   DateTime      @default(now())
+  paidAt      DateTime?
+}
+
+model Document {
+  id         String        @id @default(cuid())
+  workerId   String
+  worker     WorkerProfile @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  name       String
+  type       DocumentType
+  url        String
+  verified   Boolean       @default(false)
+  uploadedAt DateTime      @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  body      String
+  type      String
+  data      Json?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
